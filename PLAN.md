@@ -97,7 +97,7 @@ Ikki/
 @main
 struct IkkiApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
-    @StateObject private var menuBarVM = MenuBarViewModel()
+    @State private var menuBarVM = MenuBarViewModel()
     var body: some Scene { ... }
 }
 
@@ -341,20 +341,54 @@ final class BreakViewModel {
 ```swift
 @Observable
 final class SettingsViewModel {
+    // NOTE: @AppStorage cannot be used inside @Observable classes.
+    // Use plain stored properties with didSet → UserDefaults persistence.
+
     // Work timer
-    @AppStorage(UserDefaultsKeys.workIntervalMinutes) var workIntervalMinutes: Int = 25
-    @AppStorage(UserDefaultsKeys.customIntervalMinutes) var customIntervalMinutes: Int = 30
+    var workIntervalMinutes: Int = 25 {
+        didSet { UserDefaults.standard.set(workIntervalMinutes, forKey: UserDefaultsKeys.workIntervalMinutes) }
+    }
+    var customIntervalMinutes: Int = 30 {
+        didSet { UserDefaults.standard.set(customIntervalMinutes, forKey: UserDefaultsKeys.customIntervalMinutes) }
+    }
 
     // Break types enabled
-    @AppStorage(UserDefaultsKeys.breathingEnabled) var breathingEnabled: Bool = true
-    @AppStorage(UserDefaultsKeys.eyeBreakEnabled) var eyeBreakEnabled: Bool = true
-    @AppStorage(UserDefaultsKeys.blinkResetEnabled) var blinkResetEnabled: Bool = true
-    @AppStorage(UserDefaultsKeys.focusShiftEnabled) var focusShiftEnabled: Bool = true
+    var breathingEnabled: Bool = true {
+        didSet { UserDefaults.standard.set(breathingEnabled, forKey: UserDefaultsKeys.breathingEnabled) }
+    }
+    var eyeBreakEnabled: Bool = true {
+        didSet { UserDefaults.standard.set(eyeBreakEnabled, forKey: UserDefaultsKeys.eyeBreakEnabled) }
+    }
+    var blinkResetEnabled: Bool = true {
+        didSet { UserDefaults.standard.set(blinkResetEnabled, forKey: UserDefaultsKeys.blinkResetEnabled) }
+    }
+    var focusShiftEnabled: Bool = true {
+        didSet { UserDefaults.standard.set(focusShiftEnabled, forKey: UserDefaultsKeys.focusShiftEnabled) }
+    }
 
     // Defaults
-    @AppStorage(UserDefaultsKeys.defaultBreathingTechnique) var defaultBreathingTechnique: String = BreathingTechnique.cyclicSighing.rawValue
-    @AppStorage(UserDefaultsKeys.soundEnabled) var soundEnabled: Bool = true
-    @AppStorage(UserDefaultsKeys.launchAtLogin) var launchAtLogin: Bool = false
+    var defaultBreathingTechnique: String = BreathingTechnique.cyclicSighing.rawValue {
+        didSet { UserDefaults.standard.set(defaultBreathingTechnique, forKey: UserDefaultsKeys.defaultBreathingTechnique) }
+    }
+    var soundEnabled: Bool = true {
+        didSet { UserDefaults.standard.set(soundEnabled, forKey: UserDefaultsKeys.soundEnabled) }
+    }
+    var launchAtLogin: Bool = false {
+        didSet { setLaunchAtLogin(launchAtLogin) }
+    }
+
+    init() {
+        let d = UserDefaults.standard
+        workIntervalMinutes = d.object(forKey: UserDefaultsKeys.workIntervalMinutes) as? Int ?? 25
+        customIntervalMinutes = d.object(forKey: UserDefaultsKeys.customIntervalMinutes) as? Int ?? 30
+        breathingEnabled = d.object(forKey: UserDefaultsKeys.breathingEnabled) as? Bool ?? true
+        eyeBreakEnabled = d.object(forKey: UserDefaultsKeys.eyeBreakEnabled) as? Bool ?? true
+        blinkResetEnabled = d.object(forKey: UserDefaultsKeys.blinkResetEnabled) as? Bool ?? true
+        focusShiftEnabled = d.object(forKey: UserDefaultsKeys.focusShiftEnabled) as? Bool ?? true
+        defaultBreathingTechnique = d.string(forKey: UserDefaultsKeys.defaultBreathingTechnique) ?? BreathingTechnique.cyclicSighing.rawValue
+        soundEnabled = d.object(forKey: UserDefaultsKeys.soundEnabled) as? Bool ?? true
+        launchAtLogin = d.object(forKey: UserDefaultsKeys.launchAtLogin) as? Bool ?? false
+    }
 
     func setLaunchAtLogin(_ enabled: Bool)
 }
