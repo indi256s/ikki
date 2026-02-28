@@ -1,0 +1,30 @@
+# macOS
+.DS_Store
+
+# Xcode
+build/
+DerivedData/
+*.xcodeproj/
+*.xcworkspace/
+*.xcuserstate
+
+# Swift Package Manager
+.build/
+.swiftpm/
+
+# Node / JS
+node_modules/
+dist/
+.env
+*.log
+
+# Agent / Tools
+.agent/
+brain/
+.gemini/
+ralph.sh
+scripts/
+package.json
+pnpm-lock.yaml
+vitest.config.ts
+playwright.config.ts

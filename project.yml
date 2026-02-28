@@ -1,0 +1,31 @@
+name: Ikki
+options:
+  bundleIdPrefix: com.ikki
+targets:
+  Ikki:
+    type: application
+    platform: macOS
+    deploymentTarget: "14.0"
+    sources: [Ikki]
+    settings:
+      base:
+        INFOPLIST_FILE: Ikki/Info.plist
+        PRODUCT_BUNDLE_IDENTIFIER: com.ikki.app
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        LD_RUNPATH_SEARCH_PATHS: $(inherited) @executable_path/../Frameworks
+        SWIFT_VERSION: 5.9
+        MACOSX_DEPLOYMENT_TARGET: 14.0
+        SDKROOT: macosx
+        CODE_SIGN_IDENTITY: "-"
+        CODE_SIGN_STYLE: Manual
+        DEVELOPMENT_TEAM: ""
+        PROVISIONING_PROFILE_SPECIFIER: ""
+        CODE_SIGN_ENTITLEMENTS: Ikki/Ikki.entitlements
+        ENABLE_HARDENED_RUNTIME: YES
+        LSUIElement: YES
+  IkkiTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources: [IkkiTests]
+    dependencies:
+      - target: Ikki
