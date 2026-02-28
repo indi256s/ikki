@@ -3,14 +3,25 @@ import AppKit
 import UserNotifications
 
 class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate {
-    
+
     let timerService = TimerService.shared
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        // Core initialization
-        NotificationService.shared.requestAuthorization()
+        // Register as the sole notification delegate BEFORE requesting auth
+        UNUserNotificationCenter.current().delegate = self
+        NotificationService.shared.setupCategories()
+
+        NotificationService.shared.requestAuthorization { granted in
+            if !granted {
+                // Post to main thread so observers can update the UI
+                DispatchQueue.main.async {
+                    NotificationCenter.default.post(name: .notificationPermissionDenied, object: nil)
+                }
+            }
+        }
+
         GlobalShortcutManager.shared.startMonitoring()
-        
+
         // Hide dock icon
         NSApp.setActivationPolicy(.accessory)
     }
@@ -19,17 +30,17 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         GlobalShortcutManager.shared.stopMonitoring()
     }
 
-    func userNotificationCenter(_ center: UNUserNotificationCenter, 
-                                didReceive response: UNNotificationResponse, 
+    func userNotificationCenter(_ center: UNUserNotificationCenter,
+                                didReceive response: UNNotificationResponse,
                                 withCompletionHandler completionHandler: @escaping () -> Void) {
-        
+
         switch response.actionIdentifier {
         case NotificationService.startBreakActionID:
             DispatchQueue.main.async {
                 self.startBreak()
             }
         case NotificationService.snoozeActionID:
-            timerService.snooze(minutes: 5)
+            timerService.snooze(minutes: AppConstants.defaultSnoozeMinutes)
         case NotificationService.skipActionID:
             timerService.stop()
         default:
@@ -38,25 +49,25 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
                 self.startBreak()
             }
         }
-        
+
         completionHandler()
     }
 
     private func startBreak() {
         let d = UserDefaults.standard
         var enabledTypes: [BreakType] = []
-        
+
         if d.bool(forKey: UserDefaultsKeys.breathingEnabled) { enabledTypes.append(.breathing) }
         if d.bool(forKey: UserDefaultsKeys.eyeBreakEnabled) { enabledTypes.append(.eye) }
         if d.bool(forKey: UserDefaultsKeys.blinkResetEnabled) { enabledTypes.append(.blinkReset) }
         if d.bool(forKey: UserDefaultsKeys.focusShiftEnabled) { enabledTypes.append(.focusShift) }
-        
+
         // Fallback to breathing if none enabled
         let selectedType = enabledTypes.randomElement() ?? .breathing
-        
-        var technique: Any?
-        var duration: Double = 45.0
-        
+
+        let technique: (any BreakTechnique)?
+        let duration: Double
+
         switch selectedType {
         case .breathing:
             let rawValue = d.string(forKey: UserDefaultsKeys.defaultBreathingTechnique) ?? BreathingTechnique.cyclicSighing.rawValue
@@ -64,17 +75,23 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
             technique = breathingTechnique
             duration = Double(breathingTechnique.totalDurationSeconds)
         case .eye:
-            technique = EyeTechnique.twentyTwentyTwenty
-            duration = 20.0
+            let eyeTechnique = EyeTechnique.twentyTwentyTwenty
+            technique = eyeTechnique
+            duration = Double(eyeTechnique.totalDurationSeconds)
         case .blinkReset:
-            technique = nil
-            duration = 30.0 // 10 blinks * 3s
+            technique = EyeTechnique.blinkReset
+            duration = Double(EyeTechnique.blinkReset.totalDurationSeconds)
         case .focusShift:
-            technique = nil
-            duration = 50.0 // 5 rounds * 10s
+            technique = EyeTechnique.focusShift
+            duration = Double(EyeTechnique.focusShift.totalDurationSeconds)
         }
-        
+
         BreakWindowController.shared.showBreak(type: selectedType, technique: technique)
         timerService.startBreak(duration: duration)
     }
 }
+
+extension Notification.Name {
+    static let notificationPermissionDenied = Notification.Name("IkkiNotificationPermissionDenied")
+}
+

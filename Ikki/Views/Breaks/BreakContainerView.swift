@@ -4,6 +4,14 @@ struct BreakContainerView: View {
     let viewModel: BreakViewModel
     var onDismiss: () -> Void
 
+    /// The actual session length in seconds — used as the progress denominator.
+    /// Falls back to `type.defaultDurationSeconds` only when no technique is set.
+    private var sessionDuration: Int {
+        if let b = viewModel.breathingTechnique { return b.totalDurationSeconds }
+        if let e = viewModel.eyeTechnique { return e.totalDurationSeconds }
+        return viewModel.type.defaultDurationSeconds
+    }
+
     var body: some View {
         ZStack {
             // Background material
@@ -15,7 +23,11 @@ struct BreakContainerView: View {
                 GeometryReader { geo in
                     Rectangle()
                         .fill(AppColors.accent)
-                        .frame(width: geo.size.width * CGFloat(viewModel.totalRemainingSeconds > 0 ? 1.0 - (Double(viewModel.totalRemainingSeconds) / Double(viewModel.type.defaultDurationSeconds)) : 1.0))
+                        .frame(width: geo.size.width * CGFloat(
+                            sessionDuration > 0
+                            ? 1.0 - (Double(viewModel.totalRemainingSeconds) / Double(sessionDuration))
+                            : 1.0
+                        ))
                         .animation(.linear(duration: 0.1), value: viewModel.totalRemainingSeconds)
                 }
                 .frame(height: 3)

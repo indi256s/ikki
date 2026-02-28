@@ -8,7 +8,7 @@ final class MenuBarViewModel {
     
     var selectedPresetMinutes: Int = 25 {
         didSet {
-            UserDefaults.standard.set(selectedPresetMinutes, forKey: "selectedPresetMinutes")
+            UserDefaults.standard.set(selectedPresetMinutes, forKey: UserDefaultsKeys.selectedPresetMinutes)
         }
     }
     
@@ -19,8 +19,8 @@ final class MenuBarViewModel {
     }
     
     init() {
-        self.selectedPresetMinutes = UserDefaults.standard.integer(forKey: "selectedPresetMinutes")
-        if self.selectedPresetMinutes == 0 { self.selectedPresetMinutes = 25 }
+        self.selectedPresetMinutes = UserDefaults.standard.integer(forKey: UserDefaultsKeys.selectedPresetMinutes)
+        if self.selectedPresetMinutes == 0 { self.selectedPresetMinutes = AppConstants.defaultWorkIntervalMinutes }
         
         self.customMinutes = UserDefaults.standard.integer(forKey: UserDefaultsKeys.customIntervalMinutes)
         if self.customMinutes == 0 { self.customMinutes = 30 }

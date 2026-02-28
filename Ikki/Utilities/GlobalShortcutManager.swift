@@ -29,9 +29,22 @@ final class GlobalShortcutManager {
     private func handleEvent(_ event: NSEvent) {
         if event.keyCode == toggleKeyCode && (event.modifierFlags.intersection(.deviceIndependentFlagsMask)) == toggleModifierFlags {
             DispatchQueue.main.async {
-                TimerService.shared.state == .idle || TimerService.shared.state == .fired ? TimerService.shared.start(workMinutes: 25) : TimerService.shared.stop()
-                // NOTE: This toggle logic is simple for now, can be sophisticated in MenuBarViewModel
+                let timerService = TimerService.shared
+                switch timerService.state {
+                case .idle, .fired:
+                    // Read the user's configured preset at time of trigger
+                    var minutes = UserDefaults.standard.integer(forKey: UserDefaultsKeys.selectedPresetMinutes)
+                    if minutes <= 0 { minutes = AppConstants.defaultWorkIntervalMinutes }
+                    timerService.start(workMinutes: minutes)
+                case .running:
+                    timerService.pause()
+                case .paused:
+                    timerService.resume()
+                case .onBreak:
+                    break // Don't interrupt an active break
+                }
             }
         }
     }
 }
+

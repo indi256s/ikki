@@ -43,8 +43,9 @@ final class SettingsViewModel {
         let d = UserDefaults.standard
         // Register defaults in case keys don't exist
         d.register(defaults: [
-            UserDefaultsKeys.workIntervalMinutes: 25,
+            UserDefaultsKeys.workIntervalMinutes: AppConstants.defaultWorkIntervalMinutes,
             UserDefaultsKeys.customIntervalMinutes: 30,
+            UserDefaultsKeys.selectedPresetMinutes: AppConstants.defaultWorkIntervalMinutes,
             UserDefaultsKeys.breathingEnabled: true,
             UserDefaultsKeys.eyeBreakEnabled: true,
             UserDefaultsKeys.blinkResetEnabled: true,
@@ -62,7 +63,9 @@ final class SettingsViewModel {
         focusShiftEnabled = d.bool(forKey: UserDefaultsKeys.focusShiftEnabled)
         defaultBreathingTechnique = d.string(forKey: UserDefaultsKeys.defaultBreathingTechnique) ?? BreathingTechnique.cyclicSighing.rawValue
         soundEnabled = d.bool(forKey: UserDefaultsKeys.soundEnabled)
-        launchAtLogin = d.bool(forKey: UserDefaultsKeys.launchAtLogin)
+        // Read launchAtLogin from system truth (SMAppService), not UserDefaults –
+        // the two can diverge if the user removes the app via System Settings.
+        launchAtLogin = LaunchAtLoginService.shared.isEnabled
     }
 
     private func setLaunchAtLogin(_ enabled: Bool) {

@@ -14,7 +14,7 @@ final class BreakWindowController: NSWindowController {
         fatalError("init(coder:) has not been implemented")
     }
 
-    func showBreak(type: BreakType, technique: Any? = nil) {
+    func showBreak(type: BreakType, technique: (any BreakTechnique)? = nil) {
         if panel != nil {
             dismiss()
         }
@@ -46,8 +46,10 @@ final class BreakWindowController: NSWindowController {
         let hostingView = NSHostingView(rootView: containerView)
         panel.contentView = hostingView
         
-        // Center on current screen
-        if let screen = NSScreen.main {
+        // Center on the screen the user is working on (cursor screen, not always NSScreen.main)
+        let mouseLocation = NSEvent.mouseLocation
+        let screen = NSScreen.screens.first(where: { $0.frame.contains(mouseLocation) }) ?? NSScreen.main
+        if let screen = screen {
             let screenRect = screen.visibleFrame
             let x = screenRect.origin.x + (screenRect.width - AppConstants.breakWindowWidth) / 2
             let y = screenRect.origin.y + (screenRect.height - AppConstants.breakWindowHeight) / 2
