@@ -59,9 +59,16 @@ Ikki/
 │   │       ├── AnimatedEyeView.swift         # Blink animation (open/close)
 │   │       └── PhaseLabel.swift              # "Inhale" / "Hold" / "Exhale" label
 │   │
+│   ├── Theme/
+│   │   ├── AppColors.swift               # Adaptive color palette (Light/Dark)
+│   │   ├── AppTypography.swift           # SF Pro Rounded type scale
+│   │   ├── AppSpacing.swift              # 8pt grid spacing + corner radii
+│   │   └── AppAnimations.swift           # Spring animation presets
+│   │
 │   ├── Utilities/
 │   │   ├── Constants.swift               # App-wide constants
-│   │   └── UserDefaultsKeys.swift        # @AppStorage key strings
+│   │   ├── UserDefaultsKeys.swift        # @AppStorage key strings
+│   │   └── GlobalShortcutManager.swift   # ⌥⌘B global hotkey via NSEvent
 │   │
 │   └── Sounds/
 │       ├── break_start.aiff              # System-compatible break start chime
@@ -720,9 +727,9 @@ Each task is atomic and has a clear "done" criterion.
   Create a new macOS App project named `Ikki` with SwiftUI lifecycle, deployment target macOS 14.0, bundle ID `com.ikki.app`. Set `LSUIElement = true` in Info.plist. Create the folder structure from Section 1.
   **Done when:** `xcodebuild -scheme Ikki -configuration Debug build CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO` succeeds with zero errors.
 
-- [ ] **T02 — Add Constants and UserDefaultsKeys**
-  Implement `Constants.swift` and `UserDefaultsKeys.swift` as specified in Section 2.7.
-  **Done when:** Project compiles.
+- [ ] **T02 — Add Constants, UserDefaultsKeys, and Theme**
+  Implement `Constants.swift`, `UserDefaultsKeys.swift`, and the full Theme/ directory: `AppColors.swift`, `AppTypography.swift`, `AppSpacing.swift`, `AppAnimations.swift` as specified in Sections 2.7 and 9.1–9.5. Add `AccentColor` and `AccentSoft` color sets to `Assets.xcassets`.
+  **Done when:** Project compiles; `AppColors.accent` resolves in both Light and Dark appearance.
 
 ### Phase 2: Models
 
@@ -781,8 +788,8 @@ Each task is atomic and has a clear "done" criterion.
 ### Phase 5: UI Components
 
 - [ ] **T14 — Implement PulsingCircleView**
-  Create the breathing animation circle. Uses `Circle()` with `.scaleEffect()` animated with `.animation(.easeInOut(duration:))`.
-  **Done when:** Preview shows circle scaling between 0.3 and 1.0 with smooth animation.
+  Create the 3-layer breathing animation circle as specified in Section 9.9: inner fill (radial gradient), ring stroke (accent @ 25%), outer glow (blurred, accent @ 8%). Each layer scales with staggered delay (0, 0.05, 0.1s). Uses `.timingCurve(0.4, 0.0, 0.2, 1.0)` — NOT `.easeInOut`. Respects `@Environment(\.accessibilityReduceMotion)`.
+  **Done when:** Preview shows layered circle scaling between 0.3 and 1.0 with organic, staggered spring animation. Glow layer visible around edges.
 
 - [ ] **T15 — Implement CircularCountdownView**
   Create ring countdown. Uses `Circle().trim(from:to:)` with stroke style.
@@ -819,14 +826,14 @@ Each task is atomic and has a clear "done" criterion.
   **Done when:** View renders correct sub-view for each `BreakType`.
 
 - [ ] **T23 — Implement BreakWindowController**
-  Create `NSPanel` wrapper. Style: floating, non-activating, movable by background, 400×400. Host `BreakContainerView`.
-  **Done when:** Calling `showBreak()` opens a floating window with the break view; `dismiss()` closes it.
+  Create `NSPanel` wrapper per Section 9.4 spec: `.hudWindow` material, `.behindWindow` blending, `cornerRadius: 20`, `hasShadow: true`, `titlebarAppearsTransparent: true`, 420×420. Host SwiftUI `BreakContainerView` inside `NSVisualEffectView` via `NSHostingView`. Implement appear animation (fade + scale 0.92→1 spring) and dismiss animation (scale 1→0.95 + fade easeIn 0.15s) per Section 9.5. Add 3pt accent-colored progress bar at top of break window.
+  **Done when:** Calling `showBreak()` opens a floating vibrancy-backed window with spring appear animation; `dismiss()` plays exit animation then closes. Window has visible backdrop blur and rounded corners.
 
 ### Phase 7: Menu Bar & Settings UI
 
 - [ ] **T24 — Implement MenuBarView**
-  Create popover content: timer state display, preset buttons (20/25/40/52/Custom), start/pause/stop, settings gear, quit.
-  **Done when:** Menu bar popover shows all controls; buttons trigger `MenuBarViewModel` methods.
+  Create popover content per Section 9.7 layout mockup: timer countdown (32pt light monospacedDigit), linear progress bar (accent color), capsule preset buttons (6pt corners, accent fill for selected), full-width accent Start button (10pt corners), ghost Stop/Reset buttons, divider, Settings (⌘,) and Quit (⌘Q) row with SF Symbols. All text uses `AppTypography`, all spacing uses `AppSpacing`, all colors use `AppColors`. Width: 280pt.
+  **Done when:** Menu bar popover matches Section 9.7 mockup; buttons trigger `MenuBarViewModel` methods; keyboard shortcuts work.
 
 - [ ] **T25 — Implement SettingsView**
   Tabbed settings form: General (interval, sound, login) + Breaks (toggles, default technique).
@@ -842,17 +849,27 @@ Each task is atomic and has a clear "done" criterion.
   Configure `Ikki.entitlements`: App Sandbox = YES, `com.apple.security.user-notifications` = YES.
   **Done when:** App builds and runs with sandbox enabled.
 
-### Phase 9: Polish & Testing
+### Phase 9: Keyboard Shortcuts & Accessibility
 
-- [ ] **T28 — Write unit tests**
+- [ ] **T28 — Implement GlobalShortcutManager**
+  Create `GlobalShortcutManager.swift`. Register ⌥⌘B global hotkey via `NSEvent.addGlobalMonitorForEvents(matching: .keyDown)`. Wire to `MenuBarViewModel.toggleTimer()`. Add `Esc` → dismiss to break window via `.keyboardShortcut(.cancelAction)`.
+  **Done when:** Pressing ⌥⌘B toggles timer start/pause from any app; Esc closes break window.
+
+- [ ] **T29 — Add accessibility support**
+  Add `@Environment(\.accessibilityReduceMotion)` checks to all animated views. Replace spring animations with `.none` when reduced motion is on. Replace breathing circle scale animation with opacity fade. Add `.accessibilityLabel()` and `.accessibilityHint()` to all interactive controls. Ensure VoiceOver can navigate the menu bar popover and break window.
+  **Done when:** Enabling "Reduce motion" in System Settings makes all animations instant; VoiceOver reads all controls.
+
+### Phase 10: Testing & Validation
+
+- [ ] **T30 — Write unit tests**
   Create `TimerServiceTests.swift`, `BreathingTechniqueTests.swift`, `TimerStateTests.swift` with tests specified in task done criteria above.
   **Done when:** `xcodebuild test -scheme Ikki -configuration Debug CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO` passes all tests.
 
-- [ ] **T29 — App Nap resilience**
+- [ ] **T31 — App Nap resilience**
   In `TimerService`, on timer tick recalculate remaining from `fireDate` instead of decrementing. This ensures the timer survives macOS App Nap.
   **Done when:** Timer shows correct remaining time after system sleep/wake.
 
-- [ ] **T30 — Final build validation**
+- [ ] **T32 — Final build validation**
   Run full build and confirm zero warnings, zero errors.
   **Done when:** `xcodebuild -scheme Ikki -configuration Debug build CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO` exits with status 0 and `** BUILD SUCCEEDED **` in output.
 
@@ -887,3 +904,470 @@ xcodebuild test -scheme Ikki -configuration Debug \
 | `UserDefaults` / `@AppStorage` | Sufficient for flat settings; no need for Core Data or file-based config |
 | No Combine / async-await in timer | `Timer.scheduledTimer` on main run loop is simplest for 1s ticks; `@Observable` handles reactivity |
 | Zero dependencies | Maximizes reliability; all features achievable with system frameworks |
+| SF Pro Rounded for UI | Matches Apple/Raycast friendly aesthetic; system font = zero bundle size |
+| Spring animations over easeInOut | Spring physics feel alive and natural; easeInOut feels flat/robotic |
+| `NSVisualEffectView` + `.ultraThinMaterial` | Native vibrancy = instant Raycast/Apple feel |
+| 8pt spacing grid | Apple HIG standard; prevents inconsistent spacing |
+| Global keyboard shortcut | Keyboard-first UX like Raycast; power users expect this |
+
+---
+
+## 9. Visual Design System
+
+> **Design goal:** Raycast/Apple-native feel — vibrancy, spring animations, SF Pro Rounded, 8pt grid, keyboard-first.
+
+### 9.1 Color Palette
+
+Adaptive colors that work in both Light and Dark mode using semantic `NSColor` / SwiftUI `Color` mappings.
+
+```swift
+// Theme/AppColors.swift
+enum AppColors {
+    // MARK: – Accent (teal-based wellness palette)
+    static let accent      = Color("AccentColor")       // Asset catalog: Light #0D9488 / Dark #2DD4BF
+    static let accentSoft  = Color("AccentSoft")         // Light #CCFBF1 / Dark #0D3D38
+
+    // MARK: – Surfaces
+    static let surface     = Color(nsColor: .windowBackgroundColor)  // System adaptive
+    static let surfaceHover = Color(nsColor: .selectedContentBackgroundColor).opacity(0.08)
+
+    // MARK: – Text hierarchy
+    static let textPrimary   = Color(nsColor: .labelColor)           // Full opacity label
+    static let textSecondary = Color(nsColor: .secondaryLabelColor)  // 55% opacity
+    static let textTertiary  = Color(nsColor: .tertiaryLabelColor)   // 35% opacity
+
+    // MARK: – Semantic
+    static let breatheRing   = Color("AccentColor")     // Breathing circle fill
+    static let eyeRing       = Color.blue.opacity(0.8)  // Eye exercise accent
+    static let warningOrange = Color.orange              // Snooze/alert
+
+    // MARK: – Break window gradient (subtle radial behind breathing circle)
+    static let breakGradientStart = Color("AccentColor").opacity(0.15)
+    static let breakGradientEnd   = Color.clear
+}
+```
+
+**Asset Catalog entries required:**
+| Color Name | Light | Dark |
+|---|---|---|
+| `AccentColor` | `#0D9488` (teal-600) | `#2DD4BF` (teal-400) |
+| `AccentSoft` | `#CCFBF1` (teal-100) | `#0D3D38` (teal-950) |
+
+### 9.2 Typography
+
+All text uses **SF Pro Rounded** for the friendly, approachable feel that matches Apple Health and Raycast.
+
+```swift
+// Theme/AppTypography.swift
+enum AppTypography {
+    // Menu bar popover
+    static let popoverTitle     = Font.system(.title3, design: .rounded, weight: .semibold)   // 15pt
+    static let popoverBody      = Font.system(.body, design: .rounded, weight: .regular)      // 13pt
+    static let popoverCaption   = Font.system(.caption, design: .rounded, weight: .medium)    // 11pt
+
+    // Break window
+    static let breakHeadline    = Font.system(size: 28, weight: .bold, design: .rounded)
+    static let breakPhaseLabel  = Font.system(size: 22, weight: .semibold, design: .rounded)
+    static let breakCountdown   = Font.system(size: 48, weight: .light, design: .rounded).monospacedDigit()
+    static let breakCaption     = Font.system(size: 14, weight: .medium, design: .rounded)
+
+    // Settings
+    static let settingsSection  = Font.system(.headline, design: .rounded, weight: .semibold)
+    static let settingsBody     = Font.system(.body, design: .rounded, weight: .regular)
+}
+```
+
+**Type scale (8pt grid aligned):**
+| Role | Size | Weight | Line height |
+|---|---|---|---|
+| Break countdown | 48pt | Light | 56pt |
+| Break headline | 28pt | Bold | 36pt |
+| Break phase | 22pt | Semibold | 28pt |
+| Popover title | 15pt | Semibold | 20pt |
+| Body | 13pt | Regular | 18pt |
+| Caption | 11pt | Medium | 14pt |
+
+### 9.3 Spacing & Layout (8pt Grid)
+
+```swift
+// Theme/AppSpacing.swift
+enum AppSpacing {
+    static let xxs: CGFloat = 2
+    static let xs:  CGFloat = 4
+    static let sm:  CGFloat = 8
+    static let md:  CGFloat = 12
+    static let lg:  CGFloat = 16
+    static let xl:  CGFloat = 24
+    static let xxl: CGFloat = 32
+    static let xxxl: CGFloat = 48
+}
+
+enum AppCorners {
+    static let sm: CGFloat = 6
+    static let md: CGFloat = 10
+    static let lg: CGFloat = 14
+    static let xl: CGFloat = 20   // Break window corners
+}
+```
+
+### 9.4 Materials & Vibrancy
+
+```
+┌─ Menu Bar Popover ──────────────────────────┐
+│  Background: .ultraThinMaterial              │
+│  Corner radius: 10pt (system default)        │
+│  Shadow: system MenuBarExtra handles this    │
+└──────────────────────────────────────────────┘
+
+┌─ Break Window (NSPanel) ────────────────────┐
+│  NSVisualEffectView:                         │
+│    material: .hudWindow                      │
+│    blendingMode: .behindWindow               │
+│    state: .active                            │
+│  Corner radius: 20pt (panel.styleMask)       │
+│  Shadow: NSShadow offset(0,4) blur(20)       │
+│          color: black @ 0.25 opacity          │
+│  Level: .floating                             │
+│  Size: 420 × 420 (not 400 — room for padding)│
+└──────────────────────────────────────────────┘
+```
+
+**BreakWindowController NSPanel setup:**
+```swift
+let panel = NSPanel(
+    contentRect: NSRect(x: 0, y: 0, width: 420, height: 420),
+    styleMask: [.titled, .closable, .fullSizeContentView, .nonactivatingPanel],
+    backing: .buffered,
+    defer: false
+)
+panel.isFloatingPanel = true
+panel.level = .floating
+panel.titlebarAppearsTransparent = true
+panel.titleVisibility = .hidden
+panel.isMovableByWindowBackground = true
+panel.backgroundColor = .clear
+panel.hasShadow = true
+
+// Vibrancy background
+let visualEffect = NSVisualEffectView()
+visualEffect.material = .hudWindow
+visualEffect.blendingMode = .behindWindow
+visualEffect.state = .active
+visualEffect.wantsLayer = true
+visualEffect.layer?.cornerRadius = 20
+visualEffect.layer?.masksToBounds = true
+panel.contentView = visualEffect
+
+// Host SwiftUI inside the visual effect view
+let hostingView = NSHostingView(rootView: breakContainerView)
+hostingView.translatesAutoresizingMaskIntoConstraints = false
+visualEffect.addSubview(hostingView)
+// pin hostingView to all edges of visualEffect
+```
+
+### 9.5 Animation Specifications
+
+**All UI transitions use spring physics, NOT easeInOut.**
+
+```swift
+// Theme/AppAnimations.swift
+enum AppAnimations {
+    // Breathing circle scale — slow, gentle, calming
+    static let breathe = Animation.timingCurve(0.4, 0.0, 0.2, 1.0, duration: 0) // duration set per phase
+
+    // UI element appear/disappear — Raycast-like snappy spring
+    static let snappy = Animation.spring(response: 0.35, dampingFraction: 0.85, blendDuration: 0)
+
+    // Subtle state change (button highlight, toggle)
+    static let micro = Animation.spring(response: 0.2, dampingFraction: 0.9, blendDuration: 0)
+
+    // Break window appear
+    static let windowAppear = Animation.spring(response: 0.45, dampingFraction: 0.8, blendDuration: 0)
+
+    // Break window dismiss
+    static let windowDismiss = Animation.easeIn(duration: 0.15)
+
+    // Phase label text swap
+    static let phaseSwap = Animation.spring(response: 0.3, dampingFraction: 0.75, blendDuration: 0)
+}
+```
+
+**Break window appear/dismiss choreography:**
+```
+APPEAR:
+  1. Panel alpha: 0 → 1     (0.3s)
+  2. Content scale: 0.92 → 1  (spring, response 0.45)
+  3. Content offset Y: 8 → 0  (spring, same timing)
+
+DISMISS:
+  1. Content scale: 1 → 0.95  (easeIn 0.15s)
+  2. Panel alpha: 1 → 0       (easeIn 0.15s)
+  3. Remove panel after 0.15s
+```
+
+**Breathing animation — NOT a simple scale:**
+```
+PulsingCircleView layers:
+  Layer 1 (inner):  Circle filled with accent color, scales per phase
+  Layer 2 (ring):   Circle stroked, 2pt, accent @ 30% opacity, scales with 0.05 delay
+  Layer 3 (glow):   Circle filled with accent @ 10%, blurred 20pt, scales with 0.1 delay
+
+  → Creates a layered, organic "breathing" feel (not a flat circle popping)
+```
+
+**Reduced motion support:**
+```swift
+@Environment(\.accessibilityReduceMotion) var reduceMotion
+
+// In views:
+.animation(reduceMotion ? .none : AppAnimations.snappy, value: someState)
+
+// For breathing circle: replace scale animation with opacity fade
+```
+
+### 9.6 Keyboard Shortcuts
+
+```swift
+// Utilities/KeyboardShortcuts.swift
+enum AppKeyboardShortcuts {
+    // Global (works even when app is not focused)
+    static let toggleTimer = KeyEquivalent("b")   // ⌥⌘B — toggle start/pause
+    // Note: Registered via NSEvent.addGlobalMonitorForEvents
+
+    // Break window
+    // Esc → dismiss (built-in via .keyboardShortcut(.cancelAction))
+    // Space → pause/resume technique
+
+    // Menu bar popover
+    // ⌘, → open Settings (standard macOS convention)
+    // ⌘Q → quit
+}
+```
+
+**Global hotkey registration (in AppDelegate):**
+```swift
+NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { event in
+    if event.modifierFlags.contains([.option, .command]) && event.keyCode == 11 { // B key
+        // toggle timer
+    }
+}
+```
+
+### 9.7 Menu Bar Popover Layout
+
+```
+┌─────────────────── 280pt ───────────────────┐
+│  .ultraThinMaterial background               │
+│                                              │
+│  ┌──────────────────────────────────────┐   │
+│  │  ● Ikki          [IDLE state]        │   │  ← 13pt semibold + SF Symbol circle
+│  └──────────────────────────────────────┘   │
+│                                              │
+│  ┌────────────── TIMER DISPLAY ──────────┐  │
+│  │                                        │  │
+│  │           23:45                        │  │  ← 32pt light monospacedDigit
+│  │      ═══════════●━━━━━━━              │  │  ← Linear progress bar (accent color)
+│  │                                        │  │
+│  └────────────────────────────────────────┘  │
+│                                              │
+│  ┌─ PRESETS ─────────────────────────────┐  │
+│  │  ╭──────╮ ╭──────╮ ╭──────╮ ╭──────╮ │  │
+│  │  │ 20m  │ │ 25m  │ │ 40m  │ │ 52m  │ │  │  ← Capsule buttons, 6pt corner
+│  │  ╰──────╯ ╰──────╯ ╰──────╯ ╰──────╯ │  │    Selected = accent fill + white text
+│  │           ╭──────────────╮            │  │    Unselected = surfaceHover + primary text
+│  │           │  Custom: 30m │            │  │
+│  │           ╰──────────────╯            │  │
+│  └────────────────────────────────────────┘  │
+│                                              │
+│  ┌─ CONTROLS ────────────────────────────┐  │
+│  │  ╭──────────────────────────────────╮ │  │
+│  │  │         ▶ Start Timer            │ │  │  ← Full-width accent button, 10pt corners
+│  │  ╰──────────────────────────────────╯ │  │    States: Start / ⏸ Pause / ▶ Resume
+│  │                                        │  │
+│  │  ╭─────────╮     ╭─────────╮          │  │
+│  │  │  ⏹ Stop │     │  ⟳ Reset│          │  │  ← Secondary buttons (text only)
+│  │  ╰─────────╯     ╰─────────╯          │  │
+│  └────────────────────────────────────────┘  │
+│                                              │
+│  ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─  │  ← Divider (tertiaryLabel @ 20%)
+│                                              │
+│  ╭──╮ Settings          ╭──╮ Quit   ⌘Q     │  ← SF Symbols: gear + xmark
+│  ╰──╯                   ╰──╯               │
+│                                              │
+└──────────────────────────────────────────────┘
+```
+
+### 9.8 Break Window Layout
+
+```
+┌──────────────── 420 × 420pt ─────────────────┐
+│  ╭ .hudWindow material + cornerRadius 20pt ╮  │
+│  │                                          │  │
+│  │   ┌─ PROGRESS BAR (top) ──────────────┐ │  │  ← 3pt tall, accent color, full width
+│  │   │  ═══════════════●━━━━━━━━━━━━━━━ │ │  │    Shows total break progress
+│  │   └───────────────────────────────────┘ │  │
+│  │                                          │  │
+│  │   Cyclic Sighing                        │  │  ← 14pt medium, textSecondary
+│  │                                          │  │
+│  │         ┌─────────────────┐              │  │
+│  │         │                 │              │  │
+│  │         │   ◉◉◉ CIRCLE   │              │  │  ← 180pt diameter, layered:
+│  │         │   (3 layers:    │              │  │    Fill + ring + glow
+│  │         │    fill/ring/   │              │  │    Scales with spring animation
+│  │         │    glow)        │              │  │
+│  │         │                 │              │  │
+│  │         └─────────────────┘              │  │
+│  │                                          │  │
+│  │           Inhale                        │  │  ← 22pt semibold, textPrimary
+│  │                                          │  │    .contentTransition(.interpolate)
+│  │           4                             │  │  ← 48pt light monospacedDigit
+│  │                                          │  │    Per-phase countdown
+│  │   Cycle 2 of 5         0:37 remaining   │  │  ← 14pt medium, textTertiary
+│  │                                          │  │
+│  │              ╭──────────╮                │  │
+│  │              │ Dismiss  │                │  │  ← Ghost button (textSecondary)
+│  │              ╰──────────╯                │  │    .keyboardShortcut(.cancelAction)
+│  │                                          │  │
+│  ╰──────────────────────────────────────────╯  │
+└────────────────────────────────────────────────┘
+```
+
+### 9.9 Component Visual Specs
+
+**PulsingCircleView (updated from Section 2.6):**
+```swift
+struct PulsingCircleView: View {
+    var scale: CGFloat              // 0.3–1.0
+    var phaseDuration: Double       // Animation duration
+    var color: Color = AppColors.accent
+
+    var body: some View {
+        ZStack {
+            // Layer 3: Glow (outermost)
+            Circle()
+                .fill(color.opacity(0.08))
+                .blur(radius: 20)
+                .scaleEffect(scale)
+                .animation(breatheAnimation.delay(0.1), value: scale)
+
+            // Layer 2: Ring
+            Circle()
+                .stroke(color.opacity(0.25), lineWidth: 2)
+                .scaleEffect(scale)
+                .animation(breatheAnimation.delay(0.05), value: scale)
+
+            // Layer 1: Fill (innermost)
+            Circle()
+                .fill(
+                    RadialGradient(
+                        colors: [color.opacity(0.7), color.opacity(0.3)],
+                        center: .center,
+                        startRadius: 0,
+                        endRadius: 90
+                    )
+                )
+                .scaleEffect(scale)
+                .animation(breatheAnimation, value: scale)
+        }
+        .frame(width: 180, height: 180)
+    }
+
+    private var breatheAnimation: Animation {
+        .timingCurve(0.4, 0.0, 0.2, 1.0, duration: phaseDuration)
+    }
+}
+```
+
+**CircularCountdownView (updated):**
+```swift
+struct CircularCountdownView: View {
+    var totalSeconds: Double
+    var remainingSeconds: Double
+    var lineWidth: CGFloat = 4
+    var size: CGFloat = 120
+
+    private var progress: Double { remainingSeconds / totalSeconds }
+
+    var body: some View {
+        ZStack {
+            // Track
+            Circle()
+                .stroke(AppColors.textTertiary.opacity(0.15), lineWidth: lineWidth)
+
+            // Progress
+            Circle()
+                .trim(from: 0, to: progress)
+                .stroke(
+                    AppColors.accent,
+                    style: StrokeStyle(lineWidth: lineWidth, lineCap: .round)
+                )
+                .rotationEffect(.degrees(-90))
+                .animation(.linear(duration: 1), value: remainingSeconds)
+
+            // Center text
+            Text(String(format: "%.0f", remainingSeconds))
+                .font(AppTypography.breakCountdown)
+                .foregroundStyle(AppColors.textPrimary)
+                .contentTransition(.numericText())
+        }
+        .frame(width: size, height: size)
+    }
+}
+```
+
+### 9.10 Settings Window Visual Spec
+
+```
+┌─────────── Settings (480 × 360pt) ───────────┐
+│  ┌─ TabView ─────────────────────────────┐    │
+│  │  [  General  ] [  Breaks  ]           │    │  ← Standard macOS TabView
+│  └───────────────────────────────────────┘    │
+│                                               │
+│  ┌─ Form ────────────────────────────────┐   │
+│  │                                        │   │
+│  │  Work Interval                        │   │
+│  │  ╭──────╮ ╭──────╮ ╭──────╮ ╭──────╮ │   │
+│  │  │ 20m  │ │ 25m  │ │ 40m  │ │ 52m  │ │   │  ← Picker with segmented style
+│  │  ╰──────╯ ╰──────╯ ╰──────╯ ╰──────╯ │   │
+│  │                                        │   │
+│  │  Custom Duration   ╭─── 30 ──╮        │   │  ← Stepper (range: 5–120, step: 5)
+│  │                     ╰─────────╯        │   │
+│  │                                        │   │
+│  │  ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─   │   │
+│  │                                        │   │
+│  │  Sound             ╭──── ON ────╮      │   │  ← Toggle
+│  │                     ╰───────────╯      │   │
+│  │  Launch at Login    ╭──── OFF ───╮     │   │  ← Toggle
+│  │                     ╰───────────╯      │   │
+│  │                                        │   │
+│  │  Global Shortcut    ⌥⌘B              │   │  ← Display only (v1)
+│  │                                        │   │
+│  └────────────────────────────────────────┘   │
+│                                               │
+│        Ikki v1.0 • Made with ♡               │  ← 11pt, textTertiary
+└───────────────────────────────────────────────┘
+```
+
+### 9.11 Menu Bar Icon States
+
+```
+IDLE:     "Ikki"           (text label, system font)
+RUNNING:  "23m"            (remaining minutes, monospacedDigit)
+          "1:05"           (under 2 minutes: show mm:ss)
+PAUSED:   "⏸ 23m"         (pause symbol prefix)
+FIRED:    "☀"              (SF Symbol sun.max — attention-grabbing)
+ON BREAK: "🫁"             (SF Symbol lungs — breathing indicator)
+
+Implementation: MenuBarExtra(viewModel.menuBarTitle, systemImage: viewModel.menuBarIcon)
+  where menuBarIcon switches between "circle.fill", "pause.circle", "sun.max.fill", "lungs.fill"
+```
+
+### 9.12 Accessibility Requirements
+
+| Requirement | Implementation |
+|---|---|
+| Reduced motion | `@Environment(\.accessibilityReduceMotion)` — replace spring with `.none`, replace breathing scale with opacity fade |
+| VoiceOver labels | Every control gets `.accessibilityLabel()` and `.accessibilityHint()` |
+| Contrast ratio | All text meets WCAG AA (4.5:1) — enforced by using semantic `NSColor` labels |
+| Keyboard navigation | Break window: `Esc` = dismiss, `Space` = pause. Popover: full tab navigation |
+| Dynamic Type | Not applicable on macOS (system font sizes are fixed), but respect user text size preferences via `NSFont.systemFontSize` |
