@@ -10,12 +10,15 @@ A macOS menu bar app that nudges you to take micro-breaks — breathing, eye res
 
 After a set work interval (25 minutes by default), Ikki fires a notification with three choices: start a break, snooze 5 minutes, or skip. If you start one, a small floating window appears with a guided break. When it's done, the work timer restarts automatically.
 
-The breaks are short (20–75 seconds depending on the technique) and grounded in actual research:
+The breaks are short (20–75 seconds) and backed by specific research, not vibes:
 
-- Breathing — cyclic sighing (Stanford 2023), box breathing, or 4-7-8. A pulsing circle guides the pace.
-- 20-20-20 — look at something 6 meters away for 20 seconds. Reduces eye strain from close-focus work.
-- Blink reset — 10 slow, deliberate blinks. Sounds trivial; makes a difference.
-- Focus shift — alternate between near and far focus, 5 rounds of 5 seconds each.
+- **Breathing — cyclic sighing.** A 2023 Stanford study (Balban et al., *Cell Reports Medicine*) found that 5 minutes of cyclic sighing reduced anxiety and physiological arousal more effectively than mindfulness meditation or other breathing patterns. Ikki uses the same pattern: double inhale through the nose, then a long exhale.
+- **Breathing — box breathing and 4-7-8.** Both patterns slow breathing to ~6 cycles/min, which increases heart rate variability (HRV) and activates the parasympathetic nervous system (Lehrer & Gevirtz, *Frontiers in Psychology*, 2014).
+- **20-20-20.** An American Academy of Ophthalmology recommendation. Research shows blink rate drops from a normal 15–20 blinks/min to 3–8 blinks/min during screen work (Patel et al., *Ophthalmic and Physiological Optics*, 2020). Looking at distance relieves ciliary muscle spasm.
+- **Blink reset.** Same mechanism: deliberate blinking restores the tear film and reduces dry eye from prolonged close focus.
+- **Focus shift.** Alternating near and far gaze relaxes the ciliary muscle — the same mechanism as 20-20-20, but through active switching rather than passive distance viewing.
+
+Beyond the techniques themselves, the micro-break principle has its own evidence base: Ariga & Lleras (2011, *Cognition*) showed that brief, infrequent mental breaks sustain focus better than continuous work.
 
 The break type is picked at random from whatever you have enabled in settings.
 
